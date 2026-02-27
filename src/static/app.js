@@ -25,9 +25,40 @@ document.addEventListener("DOMContentLoaded", () => {
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <p><strong>Participants:</strong></p>
+          <ul class="participants">
+            ${details.participants
+              .map(p =>
+                `<li><span class="participant-email">${p}</span> <button class="remove" data-email="${p}" title="Unregister">&times;</button></li>`
+              )
+              .join("")}
+          </ul>
         `;
 
         activitiesList.appendChild(activityCard);
+
+        // wire up remove buttons inside this card
+        activityCard.querySelectorAll("button.remove").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const email = btn.getAttribute("data-email");
+            try {
+              const resp = await fetch(
+                `/activities/${encodeURIComponent(activity)}/signup?email=${encodeURIComponent(email)}`,
+                { method: "DELETE" }
+              );
+              if (resp.ok) {
+                // refresh activities list
+                fetchActivities();
+              } else {
+                const result = await resp.json();
+                alert(result.detail || "Failed to unregister");
+              }
+            } catch (err) {
+              console.error("Error unregistering", err);
+              alert("Failed to unregister. Please try again.");
+            }
+          });
+        });
 
         // Add option to select dropdown
         const option = document.createElement("option");
@@ -62,6 +93,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // update list so the new participant shows up immediately
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
